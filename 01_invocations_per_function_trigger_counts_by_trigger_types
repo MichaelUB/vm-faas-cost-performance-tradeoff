@@ -1,0 +1,68 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+# Create empty data frame
+df = pd.DataFrame()
+
+# Loop through each file and append its contents to the data frame
+for i in range(1, 15):
+    filename = f"invocations_per_function_md.anon.d{i:02}.csv"
+    temp_df = pd.read_csv(filename)
+    df = pd.concat([df, temp_df], ignore_index=True)
+
+# Calculate the sum of trigger counts for each trigger type
+trigger_counts = df.groupby('Trigger').size()
+
+# Define the trigger types and their respective labels
+trigger_types = ['http', 'timer', 'event', 'queue', 'storage', 'orchestration', 'others']
+trigger_labels = ['HTTP', 'Timer', 'Event', 'Queue', 'Storage', 'Orchestration', 'Others']
+
+# Create a figure with adjusted size and margins
+fig, ax = plt.subplots(figsize=(8, 10))
+plt.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.15)  # Adjust the margins
+
+# Calculate the total count of triggers
+total_triggers = trigger_counts.sum()
+
+# Create a bar chart with light green bars
+ax.bar(trigger_labels, trigger_counts, color='green', alpha=0.5)
+
+# Display the values of the bars above the bars with thousands separators and percentage
+for i, count in enumerate(trigger_counts):
+    formatted_count = f"{count:,}".replace(",", "'")  # Add apostrophe as thousands separator
+    percentage = count / total_triggers * 100
+    ax.text(trigger_labels[i], count, f"{formatted_count}\n({percentage:.1f}%)", ha='center', va='bottom')
+
+# Define and display the text field at the top left of the chart with thousands separators
+unique_owners = df['HashOwner'].nunique()
+unique_apps = df['HashApp'].nunique()
+unique_functions = df['HashFunction'].nunique()
+formatted_owners = f"{unique_owners:,}".replace(",", "'")  # Add apostrophe as thousands separator
+formatted_apps = f"{unique_apps:,}".replace(",", "'")  # Add apostrophe as thousands separator
+formatted_functions = f"{unique_functions:,}".replace(",", "'")  # Add apostrophe as thousands separator
+formatted_triggers = f"{total_triggers:,}".replace(",", "'")  # Add apostrophe as thousands separator
+text = f"Total Application Owner: {formatted_owners}\nTotal Applications: {formatted_apps}\nTotal Functions: {formatted_functions}\nTotal Triggers: {formatted_triggers}"
+ax.text(-0.2, 1.1, text, ha='left', va='center', transform=ax.transAxes)
+
+# Add labels and title
+ax.set_xlabel('Trigger Types')
+ax.set_ylabel('Trigger Counts')
+
+# Format y-axis tick labels with apostrophes as thousands separator
+ax.get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda y, pos: f"{y:,.0f}".replace(",", "'")))
+
+# Increase the space between the axis values and the axis labels
+ax.tick_params(axis='both', which='major', pad=8)
+
+# Set the color of the top and right spines to white
+ax.spines['top'].set_color('white')
+ax.spines['right'].set_color('white')
+
+# Add borders on all four sides
+for spine in ax.spines.values():
+    spine.set_visible(True)
+
+# Display the bar chart and rotate x-axis labels
+plt.xticks(rotation=45)
+plt.show()
