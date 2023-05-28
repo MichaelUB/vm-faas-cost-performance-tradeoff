@@ -1,0 +1,89 @@
+import random
+import csv
+import matplotlib.pyplot as plt
+
+# Define the list of first five filenames
+file_names = [
+    "function_durations_percentiles.anon.d01.csv",
+    "function_durations_percentiles.anon.d02.csv",
+    "function_durations_percentiles.anon.d03.csv",
+    "function_durations_percentiles.anon.d04.csv",
+    "function_durations_percentiles.anon.d05.csv"
+]
+
+# Read the first file to get the unique combinations of HashOwner, HashApp, HashFunction
+first_file = file_names[0]
+unique_combinations = set()
+with open(first_file, 'r') as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        combination = (row['HashOwner'], row['HashApp'], row['HashFunction'])
+        unique_combinations.add(combination)
+
+# Loop through until a line is found with the same combination in every file
+while True:
+    # Pick a random combination
+    random_combination = random.choice(list(unique_combinations))
+
+    # Check if the combination exists in every file
+    found_in_all_files = True
+    values = {}
+    for file_name in file_names:
+        with open(file_name, 'r') as file:
+            reader = csv.DictReader(file)
+            found = False
+            for row in reader:
+                combination = (row['HashOwner'], row['HashApp'], row['HashFunction'])
+                if combination == random_combination:
+                    found = True
+                    values[file_name] = {key: float(row[key]) for key in row.keys() if
+                                         key.startswith('percentile_Average')}
+                    break
+            if not found:
+                found_in_all_files = False
+                break
+
+    # Break the loop if the combination was found in every file
+    if found_in_all_files:
+        break
+
+# Print the values of first the file name followed by the the percentile averages (switch with below? TBD...)
+for file_name, line_values in values.items():
+    print("Values in", file_name)
+    for key, value in line_values.items():
+        print(key, ":", value)
+    print()
+
+# Read and print the values 'Average', 'Count', 'Minimum', and 'Maximum' for each file
+for file_name in file_names:
+    with open(file_name, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            combination = (row['HashOwner'], row['HashApp'], row['HashFunction'])
+            if combination == random_combination:
+                print("Values for", file_name)
+                print("Average:", float(row['Average']))
+                print("Count:", int(row['Count']))
+                print("Minimum:", float(row['Minimum']))
+                print("Maximum:", float(row['Maximum']))
+                print()
+                break
+
+# Create a line chart which plots the percentiles for the selected combination for all five files
+percentiles = ['0', '1', '25', '50', '75', '99', '100']
+fig, ax = plt.subplots()
+
+for i, (file_name, line_values) in enumerate(values.items()):
+    values_list = list(line_values.values())
+    ax.plot(percentiles, values_list, label=f"24h Period: {i+1}")
+
+ax.set_xlabel('Percentile')
+ax.set_ylabel('Weighted execution time average (ms)')
+ax.set_title('Percentile values for five 24h periods of random function')
+ax.legend()
+
+# Set the color of the top and right spines to white
+ax.spines['top'].set_color('white')
+ax.spines['right'].set_color('white')
+
+plt.show()
