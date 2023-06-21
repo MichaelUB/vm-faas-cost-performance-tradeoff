@@ -1,0 +1,70 @@
+import csv
+import mysql.connector
+
+# Establish connection to the MySQL server
+connection = mysql.connector.connect(
+    host="LAPTOP-D4U6JKCD",
+    user="michaelubuergi",
+    password="Te#*}KCH=vd=<xJe=8",
+    database="MySQL"
+)
+
+# Create a cursor object to execute SQL statements
+cursor = connection.cursor()
+
+# Create the invocations_per_function_md table
+create_table_query = """
+    CREATE TABLE invocations_per_function_md (
+        HashOwner VARCHAR(255),
+        HashApp VARCHAR(255),
+        HashFunction VARCHAR(255),
+        `Trigger` VARCHAR(255)
+    )
+"""
+cursor.execute(create_table_query)
+
+# Create the Minute tables
+for i in range(1, 15):
+    table_name = f"Minute_{i}"
+    create_minute_table_query = f"""
+        CREATE TABLE {table_name} (
+            HashOwner VARCHAR(255),
+            HashApp VARCHAR(255),
+            HashFunction VARCHAR(255),
+            `Trigger` VARCHAR(255),
+            `Minute` INT
+        )
+    """
+    cursor.execute(create_minute_table_query)
+
+# Insert data from the CSV files
+for i in range(1, 15):
+    file_name = f"invocations_per_function_md.anon.d{i:02}.csv"
+    with open(file_name, "r") as file:
+        csv_reader = csv.reader(file)
+        next(csv_reader)  # Skip the header row
+        for row in csv_reader:
+            hash_owner = row[0]
+            hash_app = row[1]
+            hash_function = row[2]
+            trigger = row[3]
+            minute_values = [int(value) for value in row[4:]]
+
+            # Prepare the INSERT statement
+            insert_query = f"""
+                INSERT INTO Minute_{i}
+                (HashOwner, HashApp, HashFunction, `Trigger`, `Minute`)
+                VALUES (%s, %s, %s, %s, %s)
+            """
+
+            # Execute the INSERT statement for each minute
+            for minute, value in enumerate(minute_values, start=1):
+                cursor.execute(insert_query, (hash_owner, hash_app, hash_function, trigger, value))
+
+    connection.commit()
+
+# Close the cursor and connection
+cursor.close()
+connection.close()
+
+print("Data insertion completed successfully.")
