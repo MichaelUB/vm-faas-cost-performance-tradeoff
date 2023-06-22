@@ -1,0 +1,47 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Set display options for horizontal display
+pd.set_option('display.width', 1000)
+pd.set_option('display.expand_frame_repr', False)
+
+# Read the first file
+invocations_file = 'invocations_per_function_md.anon.d01.csv'
+invocations_data = pd.read_csv(invocations_file)
+
+# Read the second file
+durations_file = 'function_durations_percentiles.anon.d01.csv'
+durations_data = pd.read_csv(durations_file)
+
+# Create an empty DataFrame to store the results
+results = pd.DataFrame(columns=['HashFunction', 'Invocations', 'Average Duration'])
+
+# Iterate over each HashFunction in the first file
+for hash_function in invocations_data['HashFunction']:
+    # Count invocations for the current HashFunction
+    invocations_counts = invocations_data.loc[invocations_data['HashFunction'] == hash_function, '1':'1440'].sum().sum()
+
+    # Find the average execution duration for the current HashFunction
+    matching_rows = durations_data[durations_data['HashFunction'] == hash_function]
+    if len(matching_rows) > 0:
+        average_duration = matching_rows['Average'].values[0]
+    else:
+        average_duration = None
+
+    # Create a temporary DataFrame with the current row
+    temp_df = pd.DataFrame({'HashFunction': [hash_function], 'Invocations': [invocations_counts], 'Average Duration': [average_duration]})
+
+    # Concatenate the temporary DataFrame with the results DataFrame
+    results = pd.concat([results, temp_df], ignore_index=True)
+
+# Print the results table
+print(results.to_string(index=False))
+
+# Plot scatter plot with logarithmic x-axis and y-axis
+plt.scatter(results['Invocations'], results['Average Duration'], s=5)  # Adjust the 's' parameter to change the size of data points
+plt.xscale('log')  # Set x-axis to logarithmic scale
+plt.yscale('log')  # Set y-axis to logarithmic scale
+plt.xlabel('Invocations')
+plt.ylabel('Duration (ms)')
+plt.title('Function Invocations vs Function Duration')
+plt.show()
